@@ -7,6 +7,7 @@
  * list — a third car is one entry here and nothing else.
  */
 
+import type { CarSound } from '../audio/carSound'
 import type { CarPaint } from './paint'
 
 export interface CarLivery {
@@ -29,6 +30,12 @@ export interface CarSpec {
    * lightness so the two cars are told apart on a small, bright picture.
    */
   liveries: readonly [CarLivery, CarLivery]
+  /**
+   * How the car sounds. The two cars DRIVE identically and always will (see
+   * docs/UI.md), but two engines on one set of speakers have to be told apart
+   * by ear, or the splitscreen is one undifferentiated drone.
+   */
+  sound: CarSound
 }
 
 export const CAR_CATALOG: readonly [CarSpec, CarSpec] = [
@@ -41,6 +48,22 @@ export const CAR_CATALOG: readonly [CarSpec, CarSpec] = [
       { name: 'orange-rød', paint: { hue: 0.035, saturation: 0.82, lightnessShift: 0 } },
       { name: 'turkis', paint: { hue: 0.5, saturation: 0.72, lightnessShift: 0.12 } },
     ],
+    // The turbo four: high, thin and raspy, with a fifth on top that makes it
+    // sound busy. A saw through an open filter is the nearest a synthesised
+    // engine gets to a small motor with too few gears.
+    sound: {
+      idleHz: 64,
+      topHz: 330,
+      revCurve: 0.78,
+      wave: 'sawtooth',
+      overtone: 1.5,
+      overtoneWave: 'square',
+      overtoneMix: 0.35,
+      toneHz: 540,
+      brightHz: 3200,
+      wobbleHz: 6.3,
+      squealTilt: 1.08,
+    },
   },
   {
     file: 'sedan-sports.glb',
@@ -51,6 +74,22 @@ export const CAR_CATALOG: readonly [CarSpec, CarSpec] = [
       { name: 'sandfarvet', paint: { hue: 0.105, saturation: 0.5, lightnessShift: 0.3 } },
       { name: 'blå', paint: { hue: 0.6, saturation: 0.7, lightnessShift: -0.08 } },
     ],
+    // The engine sits in the back and it is a bigger one: a fifth lower, an
+    // octave instead of a fifth on top, and a filter kept shut, so it rumbles
+    // where the other car rasps.
+    sound: {
+      idleHz: 46,
+      topHz: 232,
+      revCurve: 0.66,
+      wave: 'square',
+      overtone: 2,
+      overtoneWave: 'sawtooth',
+      overtoneMix: 0.42,
+      toneHz: 380,
+      brightHz: 2400,
+      wobbleHz: 4.7,
+      squealTilt: 0.92,
+    },
   },
 ]
 
