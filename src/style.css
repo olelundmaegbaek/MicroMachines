@@ -64,3 +64,359 @@ body {
 .debug-overlay[hidden] {
   display: none;
 }
+
+/* ---------------------------------------------------------------------------
+   HUD. DOM over the canvas, never geometry (docs/UI.md).
+
+   Every size is in vh, because a splitscreen half is only about 400 px tall on
+   a laptop: at that height 1vh is 8 px, so the lap number below is 34 px and
+   the position 44 px. The clamps keep it readable on a phone-sized window and
+   stop it growing silly on a 4K screen.
+   --------------------------------------------------------------------------- */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  /* The game is played with two hands each: nothing here is clickable. */
+  pointer-events: none;
+  /* Above the debug overlay, which is a developer tool and may be toggled off. */
+  z-index: 2;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-half {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  overflow: hidden;
+  --player-color: #f4e9d8;
+}
+
+.hud-half--1 {
+  top: 0;
+}
+
+.hud-half--2 {
+  top: 50%;
+}
+
+/* The three numbers sit in the corner that faces AWAY from the split line, so
+   the two players' figures can never run together in the middle. */
+.hud-corner {
+  position: absolute;
+  right: 2.2vh;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4vh;
+}
+
+.hud-half--1 .hud-corner {
+  top: 1.6vh;
+}
+
+/* Mirrored for the bottom half: the big numbers stay on the outer edge and the
+   discreet speed is the one nearest the divider. */
+.hud-half--2 .hud-corner {
+  bottom: 1.6vh;
+  flex-direction: column-reverse;
+}
+
+.hud-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.6vh;
+}
+
+.hud-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.hud-big {
+  font-size: clamp(20px, 4.4vh, 46px);
+  font-weight: 800;
+  color: var(--player-color);
+  text-shadow: 0 0.2vh 0.5vh rgba(0, 0, 0, 0.75);
+}
+
+.hud-block--place .hud-big {
+  font-size: clamp(24px, 5.6vh, 58px);
+}
+
+.hud-label {
+  font-size: clamp(8px, 1.3vh, 13px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(244, 233, 216, 0.75);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.hud-speed {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5vh;
+  opacity: 0.85;
+}
+
+.hud-speed-value {
+  font-size: clamp(13px, 2.4vh, 26px);
+  font-weight: 700;
+  color: #f4e9d8;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.hud-banner {
+  font-size: clamp(11px, 1.9vh, 20px);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 0.5vh 1vh;
+  border-radius: 0.8vh;
+  background: var(--player-color);
+  color: #1a1410;
+  box-shadow: 0 0.3vh 0.8vh rgba(0, 0, 0, 0.5);
+}
+
+/* "Hovsa!" and "I MÅL!" — in the player's own half, never across the screen. */
+.hud-note {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(22px, 5vh, 52px);
+  font-weight: 800;
+  color: #ffe9b8;
+  text-shadow: 0 0.3vh 0.8vh rgba(0, 0, 0, 0.75);
+}
+
+/* --- Car select ---------------------------------------------------------- */
+
+.hud-select {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(72vw, 62vh);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6vh;
+  padding: 1.6vh 2vh;
+  border-radius: 1.4vh;
+  background: rgba(20, 16, 12, 0.72);
+  border: 0.3vh solid var(--player-color);
+  text-align: center;
+}
+
+.hud-select--ready {
+  background: rgba(30, 44, 24, 0.78);
+}
+
+.hud-select-player {
+  font-size: clamp(9px, 1.4vh, 14px);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: rgba(244, 233, 216, 0.7);
+}
+
+.hud-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6vh;
+}
+
+.hud-arrow {
+  font-size: clamp(14px, 2.6vh, 28px);
+  color: var(--player-color);
+}
+
+.hud-select--ready .hud-arrow {
+  opacity: 0.25;
+}
+
+.hud-select-name {
+  font-size: clamp(18px, 3.6vh, 38px);
+  font-weight: 800;
+  color: var(--player-color);
+  line-height: 1.1;
+}
+
+.hud-select-colorline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6vh;
+  font-size: clamp(9px, 1.5vh, 15px);
+  color: rgba(244, 233, 216, 0.8);
+}
+
+.hud-swatch {
+  width: 1.4vh;
+  height: 1.4vh;
+  min-width: 10px;
+  min-height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+.hud-select-desc {
+  font-size: clamp(10px, 1.7vh, 17px);
+  font-style: italic;
+  color: rgba(244, 233, 216, 0.9);
+  line-height: 1.3;
+}
+
+.hud-select-state {
+  font-size: clamp(9px, 1.5vh, 15px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: rgba(244, 233, 216, 0.75);
+}
+
+.hud-select--ready .hud-select-state {
+  color: #b7e57d;
+}
+
+/* --- Countdown and winner screen, across BOTH halves --------------------- */
+
+.hud-centre {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-countdown {
+  position: absolute;
+  font-size: clamp(60px, 20vh, 220px);
+  font-weight: 900;
+  color: #ffe9b8;
+  text-shadow: 0 0.6vh 1.6vh rgba(0, 0, 0, 0.7);
+  /* The scale comes from the state machine's pulse, set per frame in hud.ts. */
+  will-change: transform, opacity;
+}
+
+.hud-countdown--go {
+  color: #b7e57d;
+}
+
+.hud-winner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6vh;
+  padding: 2.4vh 4vh;
+  border-radius: 1.6vh;
+  background: rgba(20, 16, 12, 0.86);
+  border: 0.3vh solid var(--player-color, #ffe9b8);
+  text-align: center;
+  --player-color: #ffe9b8;
+}
+
+.hud-winner-eyebrow {
+  font-size: clamp(9px, 1.6vh, 16px);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: rgba(244, 233, 216, 0.7);
+}
+
+.hud-winner-name {
+  font-size: clamp(24px, 5.4vh, 60px);
+  font-weight: 900;
+  color: var(--player-color);
+  line-height: 1.05;
+}
+
+.hud-winner-time {
+  font-size: clamp(18px, 3.8vh, 40px);
+  font-weight: 800;
+  color: #f4e9d8;
+}
+
+.hud-laplist {
+  list-style: none;
+  margin: 0.4vh 0 0;
+  padding: 0;
+  display: flex;
+  gap: 1.2vh;
+}
+
+.hud-laprow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4vh;
+  padding: 0.4vh 0.9vh;
+  border-radius: 0.7vh;
+  background: rgba(244, 233, 216, 0.1);
+  font-size: clamp(10px, 1.8vh, 18px);
+  color: rgba(244, 233, 216, 0.85);
+}
+
+.hud-laprow--best {
+  background: rgba(183, 229, 125, 0.22);
+  color: #d8f5b0;
+  font-weight: 800;
+}
+
+.hud-lapindex {
+  opacity: 0.6;
+}
+
+.hud-praise {
+  margin-top: 0.6vh;
+  font-size: clamp(10px, 1.8vh, 18px);
+  color: rgba(244, 233, 216, 0.9);
+}
+
+.hud-choices {
+  display: flex;
+  gap: 1.2vh;
+  margin-top: 0.8vh;
+}
+
+.hud-choice {
+  padding: 0.8vh 1.8vh;
+  border-radius: 0.9vh;
+  border: 0.25vh solid rgba(244, 233, 216, 0.35);
+  font-size: clamp(11px, 2vh, 21px);
+  font-weight: 800;
+  color: rgba(244, 233, 216, 0.8);
+}
+
+.hud-choice--active {
+  background: var(--player-color);
+  border-color: var(--player-color);
+  color: #1a1410;
+}
+
+.hud-hint {
+  margin-top: 0.6vh;
+  font-size: clamp(9px, 1.4vh, 14px);
+  color: rgba(244, 233, 216, 0.6);
+}
+
+/* What each phase shows. One attribute on the root, so the HUD never has to
+   hide things one by one. */
+.hud[data-phase='select'] .hud-corner,
+.hud[data-phase='finished'] .hud-corner,
+.hud[data-phase='select'] .hud-note,
+.hud[data-phase='finished'] .hud-note {
+  display: none;
+}
+
+.hud:not([data-phase='select']) .hud-select {
+  display: none;
+}
+
+.hud:not([data-phase='finished']) .hud-winner {
+  display: none;
+}
+
+.hud [hidden] {
+  display: none;
+}

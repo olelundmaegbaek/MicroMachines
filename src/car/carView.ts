@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 
 import { CAR_SIZE } from '../constants'
 import type { CarPose } from '../types'
+import type { CarLivery, CarSpec } from './catalog'
 import { repaintPixels, type CarPaint } from './paint'
 import type { CarState } from './physics'
 
@@ -33,33 +34,6 @@ const NODES = {
     { name: 'wheel-back-right', front: false },
   ],
 } as const
-
-export interface CarModel {
-  /** File name under public/assets/cars/. */
-  file: string
-  /** In-game name. Look-alikes with invented names — never a real badge. */
-  name: string
-  paint: CarPaint
-}
-
-/**
- * Player 1 drives the long hatchback, player 2 the short sedan. The two paints
- * have to read apart instantly in a splitscreen half the height of the window,
- * so they differ in lightness as well as hue: a hot orange-red against a pale
- * sand.
- */
-export const CAR_MODELS: readonly [CarModel, CarModel] = [
-  {
-    file: 'hatchback-sports.glb',
-    name: 'Soba Supreme',
-    paint: { hue: 0.035, saturation: 0.82, lightnessShift: 0 },
-  },
-  {
-    file: 'sedan-sports.glb',
-    name: 'Porcini 911',
-    paint: { hue: 0.105, saturation: 0.5, lightnessShift: 0.3 },
-  },
-]
 
 /** A contact patch on the table, in world XZ. The skid marks trail these. */
 export interface WheelContact {
@@ -143,9 +117,14 @@ function repaintTexture(source: THREE.Texture, paint: CarPaint): THREE.Texture |
   return texture
 }
 
-export function createCarView(model: CarModel): CarView {
+/**
+ * One painted car. The spec says which model, the livery says which colour —
+ * two players who picked the SAME car get two views, one per livery, and that
+ * is the only way they can be told apart in splitscreen.
+ */
+export function createCarView(spec: CarSpec, livery: CarLivery): CarView {
   const object = new THREE.Group()
-  object.name = model.name
+  object.name = `${spec.name} (${livery.name})`
 
   const ownedMaterials: THREE.Material[] = []
   const ownedTextures: THREE.Texture[] = []
@@ -170,14 +149,14 @@ export function createCarView(model: CarModel): CarView {
     // Clone first, always: the loaded material instance is shared by every mesh
     // in the file, and the texture behind it by every model in the kit.
     const painted = source.clone()
-    const texture = painted.map ? repaintTexture(painted.map, model.paint) : null
+    const texture = painted.map ? repaintTexture(painted.map, livery.paint) : null
     if (texture) {
       painted.map = texture
       ownedTextures.push(texture)
     } else {
       // No canvas to repaint with: a flat tint at least keeps the two cars apart.
       painted.map = null
-      painted.color.setHSL(model.paint.hue, model.paint.saturation, 0.5 + model.paint.lightnessShift)
+      painted.color.setHSL(livery.paint.hue, livery.paint.saturation, 0.5 + livery.paint.lightnessShift)
     }
     ownedMaterials.push(painted)
 
@@ -186,7 +165,7 @@ export function createCarView(model: CarModel): CarView {
     if (spoiler instanceof THREE.Mesh) spoiler.material = painted
   }
 
-  const ready = loader.loadAsync(model.file).then((gltf) => {
+  const ready = loader.loadAsync(spec.file).then((gltf) => {
     const root = gltf.scene
 
     // Uniform scale from the measured length, not from a guessed number.
@@ -204,7 +183,7 @@ export function createCarView(model: CarModel): CarView {
     for (const wheel of NODES.wheels) {
       const node = root.getObjectByName(wheel.name)
       if (!node) {
-        console.warn(`${model.file}: no node named ${wheel.name}`)
+        console.warn(`${spec.file}: no node named ${wheel.name}`)
         continue
       }
       // Steer about Y, roll about X, in that order — with the default XYZ order

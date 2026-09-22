@@ -7,7 +7,12 @@ export const DEBUG_OVERLAY = {
   updatesPerSecond: 10,
   /** Either key toggles the panel. */
   toggleCodes: ['F3', 'Backquote'],
-  visibleByDefault: true,
+  /**
+   * Off until asked for. Phase 5 put a real HUD on the screen, and a developer
+   * panel across the car select is exactly the "in the way" this must not be.
+   * F3 (or the key left of 1) brings it straight back.
+   */
+  visibleByDefault: false,
 } as const
 
 // `includes` on an `as const` tuple would only accept its own two literals.

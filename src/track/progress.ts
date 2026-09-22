@@ -85,6 +85,12 @@ export interface TrackProgress {
   readonly cars: readonly Readonly<TrackCarProgress>[]
   /** Put a car down (start grid, or after a fall) and re-seed its progress. */
   place(player: number, pose: TrackPose): void
+  /**
+   * Put a car on the grid for a NEW RACE: everything `place` does, plus the
+   * lap counter, the checkpoints and the unrolled arc length back to zero.
+   * A respawn after a fall must NOT use this — that car keeps its race.
+   */
+  reset(player: number, pose: TrackPose): void
   /** What `stepCar` should be given this tick. Call BEFORE the step. */
   surface(player: number): Readonly<SurfaceInput>
   /**
@@ -191,16 +197,27 @@ export function createTrackProgress(track: Track, playerCount: number): TrackPro
     slot.wasAirborne = false
   }
 
+  const placeOnGrid = (player: number, pose: TrackPose): void => {
+    place(player, pose)
+    // A car put down behind the line starts the lap it is about to enter, not
+    // the one it would look like it is finishing.
+    const slot = slots[player]
+    slot.lastGateS = pose.s
+    slot.progress.justRespawned = false
+  }
+
   return {
     cars: slots.map((slot) => slot.progress),
 
-    place(player, pose): void {
-      place(player, pose)
-      // A car put down behind the line starts the lap it is about to enter,
-      // not the one it would look like it is finishing.
+    place: placeOnGrid,
+
+    reset(player, pose): void {
       const slot = slots[player]
-      slot.lastGateS = pose.s
-      slot.progress.justRespawned = false
+      // Before `placeOnGrid`, which derives the unrolled `s` from the index.
+      slot.lapIndex = 0
+      slot.progress.laps = 0
+      slot.progress.checkpointsPassed = 0
+      placeOnGrid(player, pose)
     },
 
     surface(player): Readonly<SurfaceInput> {

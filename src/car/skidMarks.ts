@@ -65,6 +65,12 @@ export interface SkidMarks {
   mark(trail: number, x: number, z: number, strength: number): void
   /** The wheel stopped marking (or teleported): break the ribbon here. */
   lift(trail: number): void
+  /**
+   * Wipes every mark on the table. A new race starts on a clean table, and
+   * `lift` alone cannot do it: that only breaks a ribbon, it does not erase
+   * the quads already in the buffer.
+   */
+  clear(): void
   /** Ages the marks. Call once per frame, before `mark`. */
   update(dt: number): void
   dispose(): void
@@ -267,6 +273,19 @@ export function createSkidMarks(): SkidMarks {
     lift(trail): void {
       const state = trails[trail]
       if (state) state.started = false
+    },
+    clear(): void {
+      // Alpha 0 on every slot, live or not: the ring buffer draws its whole
+      // index range every frame, so an old quad left opaque would still show.
+      for (let segment = 0; segment < max; segment += 1) writeAlpha(segment, 0)
+      head = 0
+      tail = 0
+      live = 0
+      for (const trail of trails) {
+        trail.started = false
+        trail.hasEdge = false
+      }
+      colorAttribute.needsUpdate = true
     },
     update(dt): void {
       if (live === 0) return
