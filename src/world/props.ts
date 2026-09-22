@@ -334,14 +334,13 @@ interface PropPlacement {
 
 /**
  * ONE line per prop. The road is 10 units wide, so a lateral of ±5 is the
- * edge of it: anything with `role: 'decor'` stands clear of that (measured,
- * see the phase 4 report), anything with `role: 'obstacle'` is allowed to
+ * edge of it: anything with `role: 'obstacle'` is allowed to
  * reach over it, and that reach is the whole point of the section.
  */
 export const PROP_PLACEMENTS: readonly PropPlacement[] = [
   // 1. Startstrækningen — nothing may stand on it: a race has to begin calm.
-  { model: 'pizzaBox', at: 'startStraight', ds: 4, lateral: -24, yaw: 0.5, role: 'decor' },
-  { model: 'mug', at: 'startStraight', ds: -12, lateral: -14, yaw: -0.7, role: 'decor' },
+  { model: 'pizzaBox', at: 'startStraight', ds: 4, lateral: -24, yaw: 0.5, role: 'obstacle' },
+  { model: 'mug', at: 'startStraight', ds: -12, lateral: -14, yaw: -0.7, role: 'light' },
   { model: 'banana', at: 'startStraight', ds: 14, lateral: -10, yaw: 1.1, role: 'light' },
 
   // 2. Bestik-sliden: cutlery scattered across the road. LIGHT, not fixed.
@@ -353,7 +352,7 @@ export const PROP_PLACEMENTS: readonly PropPlacement[] = [
   { model: 'utensilFork', at: 'cutlery', ds: -5, lateral: 2.6, yaw: 0.9, role: 'light' },
   { model: 'utensilKnife', at: 'cutlery', ds: 0, lateral: -2.6, yaw: -0.5, role: 'light' },
   { model: 'utensilSpoon', at: 'cutlery', ds: 6, lateral: 3.6, yaw: 1.4, role: 'light' },
-  { model: 'plate', at: 'cutlery', ds: 0, lateral: -19, yaw: 0, role: 'decor' },
+  { model: 'plate', at: 'cutlery', ds: 0, lateral: -19, yaw: 0, role: 'obstacle' },
   { model: 'cake', at: 'cutlery', ds: 0, lateral: -19, yaw: 0.6, role: 'decor', lift: 1.3 },
   { model: 'apple', at: 'cutlery', ds: 10, lateral: -9, yaw: 0, role: 'light' },
 
@@ -369,19 +368,19 @@ export const PROP_PLACEMENTS: readonly PropPlacement[] = [
   // 4. Melsporet: markers on the INSIDE only — the outside is the table edge.
   { model: 'bottleOil', at: 'flour', ds: -13, lateral: -8.5, yaw: 0, role: 'obstacle' },
   { model: 'bottleKetchup', at: 'flour', ds: 13, lateral: -8.5, yaw: 0.8, role: 'obstacle' },
-  { model: 'glass', at: 'flour', ds: 8, lateral: -16, yaw: 0, role: 'decor' },
-  { model: 'eggCup', at: 'flour', ds: -6, lateral: -20, yaw: 0, role: 'decor' },
+  { model: 'glass', at: 'flour', ds: 8, lateral: -16, yaw: 0, role: 'light' },
+  { model: 'eggCup', at: 'flour', ds: -6, lateral: -20, yaw: 0, role: 'light' },
 
   // 5. Rampen: the landing zone stays clear; the scenery sits well inside.
-  { model: 'bowl', at: 'ramp', ds: 0, lateral: -19, yaw: 0, role: 'decor' },
-  { model: 'plate', at: 'ramp', ds: -14, lateral: -13.5, yaw: 0, role: 'decor' },
+  { model: 'bowl', at: 'ramp', ds: 0, lateral: -19, yaw: 0, role: 'obstacle' },
+  { model: 'plate', at: 'ramp', ds: -14, lateral: -13.5, yaw: 0, role: 'obstacle' },
   { model: 'donut', at: 'ramp', ds: -14, lateral: -13.5, yaw: 0.9, role: 'decor', lift: 1.3 },
   { model: 'carrot', at: 'ramp', ds: 15, lateral: -10, yaw: 0.4, role: 'light' },
 
   // 6. Kaffesøen: the tipped cup the puddle ran out of, and a dropped donut.
   { model: 'cupCoffee', at: 'coffee', ds: -2, lateral: 9, yaw: 2.4, role: 'light', roll: -1.5708, lift: 2.25 },
   { model: 'donut', at: 'coffee', ds: 0, lateral: 9.5, yaw: 0, role: 'light' },
-  { model: 'pepperMill', at: 'coffee', ds: -8, lateral: -14, yaw: 0, role: 'decor' },
+  { model: 'pepperMill', at: 'coffee', ds: -8, lateral: -14, yaw: 0, role: 'light' },
 
   // 7. Skærebræts-plateauet: the road climbs a raised board of its own (that
   //    one is the track's height map, see kitchenTable.ts), so this is a
@@ -392,17 +391,17 @@ export const PROP_PLACEMENTS: readonly PropPlacement[] = [
   { model: 'cuttingBoard', at: 'cuttingBoard', ds: -2, lateral: 11, yaw: 0.15, role: 'obstacle' },
   { model: 'utensilKnife', at: 'cuttingBoard', ds: -0.5, lateral: 11, yaw: 1.5, role: 'decor', lift: 1.3 },
   { model: 'carrot', at: 'cuttingBoard', ds: -3.5, lateral: 12.5, yaw: 0, role: 'decor', lift: 1.3 },
-  { model: 'glass', at: 'cuttingBoard', ds: 13, lateral: 9, yaw: 0, role: 'decor' },
+  { model: 'glass', at: 'cuttingBoard', ds: 13, lateral: 9, yaw: 0, role: 'light' },
 
   // 8. Tallerken-svinget: the plate hangs over the INSIDE of the corner, so
   //    it narrows the line instead of closing it (see the phase 4 report).
   { model: 'plateDinner', at: 'plateCorner', ds: 0, lateral: -8, yaw: 0.35, role: 'obstacle' },
-  { model: 'bottleKetchup', at: 'plateCorner', ds: -16, lateral: 9.5, yaw: 0, role: 'decor' },
-  { model: 'pan', at: 'plateCorner', ds: 4, lateral: 13, yaw: 1.2, role: 'decor' },
+  { model: 'bottleKetchup', at: 'plateCorner', ds: -16, lateral: 9.5, yaw: 0, role: 'obstacle' },
+  { model: 'pan', at: 'plateCorner', ds: 4, lateral: 13, yaw: 1.2, role: 'obstacle' },
   // The run out of the corner and over the line, still measured from the
   // corner because that is the section these belong to.
   { model: 'apple', at: 'plateCorner', ds: 29, lateral: -9, yaw: 0, role: 'light' },
-  { model: 'broccoli', at: 'plateCorner', ds: 36, lateral: -14, yaw: 0, role: 'decor' },
+  { model: 'broccoli', at: 'plateCorner', ds: 36, lateral: -14, yaw: 0, role: 'light' },
 ]
 
 /** One placed prop: its body for the collision, its transform for the view. */

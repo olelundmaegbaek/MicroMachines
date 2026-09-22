@@ -18,6 +18,14 @@
  *                 car: a donut does not stop a car, and a prop that could push
  *                 back would be a second, untuned handling model.
  *  - `decor`    — never in the grid at all, so it costs nothing per tick.
+ *                 ONLY for something stacked on a prop that already collides:
+ *                 the cake on its plate, the knife on the cutting board. The
+ *                 host's circle already covers it, and giving the topping its
+ *                 own would put a second collider inside the first.
+ *
+ * `decor` used to mean "standing off the racing line", which is why half the
+ * table could be driven straight through. Where a prop stands is a separate
+ * question from whether it is solid, and it is answered by its placement.
  */
 
 import { CAR_COLLISION, twistFor } from '../car/collision'
