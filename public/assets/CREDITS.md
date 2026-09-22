@@ -30,12 +30,20 @@ The orange plastic toy-track pieces, their supports, and the start/finish gates.
 Used for the ramp and jump section, where the route leaves the table surface and
 runs over a piece of toy track.
 
-## `textures/` — Poly Haven "wood_table_001"
+## `textures/` — Poly Haven "kitchen_wood"
 
-<https://polyhaven.com/a/wood_table_001>
+<https://polyhaven.com/a/kitchen_wood>
 
 1K JPEG diffuse, normal (OpenGL convention) and roughness maps for the table
 top.
+
+The first choice here was `wood_table_001`, a dark walnut. It was dropped for a
+reason worth keeping written down: its hue is 17 degrees at 0.72 saturation, and
+Soba Supreme's paint is 16 degrees. The car and the table were the same colour,
+separated only by brightness, and the map was dark enough that it had to be
+multiplied past an albedo of 1 to sit in the lit scene at all. `kitchen_wood`
+lands at the same luminance without any tint, at 31 degrees and 0.21 saturation,
+so both cars separate from the table by hue as well as by value.
 
 ## Texture paths — do not flatten this folder
 

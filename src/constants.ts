@@ -2,11 +2,15 @@
  * Scale, world dimensions and timing. BINDING: the car model (phase 2), the
  * track (phase 3) and the art (phase 4) are all built on these numbers.
  *
- * The cars are 1:64 toys, so one world unit is about 1.75 cm: a 4-unit car is
- * 7 cm long, and the 130 x 70 table is 2.3 x 1.2 m. Everything else — grip,
- * camera distance, prop sizes — has to feel right at that scale.
+ * One world unit is 2 cm, and that is derived rather than chosen: a 1:64 toy
+ * car is about 8 cm long and ours is 4.0 units. The 130 x 70 table is then
+ * 2.6 x 1.4 m, a large kitchen table. Everything else — grip, camera distance,
+ * prop sizes, the width of a board in the table top — has to hold at that
+ * scale, and all of it must read this one constant. An earlier 1.75 here was a
+ * guess made before anything had to agree with anything else, and it left the
+ * props sized against the car while the table top was sized against the guess.
  */
-export const WORLD_UNIT_CM = 1.75
+export const WORLD_UNIT_CM = 2
 
 /** Toy car bounding box, in world units. */
 export const CAR_SIZE = {

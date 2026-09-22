@@ -3,26 +3,42 @@ import * as THREE from 'three'
 import { FLOOR_Y, TABLE } from '../constants'
 
 /**
- * The whole mood of the game in one object. Warm, bright, cartoonish — a
- * sunlit kitchen, not a studio.
+ * The whole mood of the game in one object. Mid-morning sun through a kitchen
+ * window: warm, raking, cartoonish — not a studio and not a grey afternoon.
  */
 export const SCENE_LOOK = {
   /** Background and fog share this colour, so the table ends fade into it. */
   kitchen: 0xf2e3cd,
-  /** Fog only bites past the far end of the table. */
-  fogNear: 70,
-  fogFar: 220,
-  /** The "window": low and to the side, so props throw long, readable shadows. */
+  /**
+   * Fog is a haze on the far END of the table, not weather. The cream is
+   * fourteen times brighter than the wood, so a few percent is all it takes:
+   * at 130 units (the length of the table) this is 1.5 %, at the far corner
+   * 6 %, and it reaches full strength at 460 — inside the camera's 500 far
+   * plane, so the kitchen floor is swallowed before it can show an edge.
+   */
+  fogNear: 125,
+  fogFar: 460,
+  /**
+   * The window: 35 degrees up and 35 degrees off the table's short axis, so
+   * the light rakes ACROSS the table and a cup three units tall throws a
+   * shadow four units long. Higher and the table goes flat; much lower and
+   * the props throw their shadows clean off the table.
+   */
   sun: {
-    color: 0xfff4de,
-    intensity: 3.0,
-    position: { x: 58, y: 88, z: 38 },
+    color: 0xffeccd,
+    intensity: 3.8,
+    position: { x: 52, y: 63, z: 74 },
   },
-  /** Bounce light, so the shadows are grey-blue toy shadows and not holes. */
+  /**
+   * Bounce light, so the shadows are warm toy shadows and not holes. Held at
+   * a third of the sun, because that ratio IS the shadow contrast: shadowed
+   * wood reads at 35 % of sunlit wood, dark enough to have shape and light
+   * enough to still be wood.
+   */
   fill: {
-    skyColor: 0xfff1d8,
+    skyColor: 0xfff0d8,
     groundColor: 0xb59273,
-    intensity: 1.6,
+    intensity: 1.15,
   },
   shadow: {
     mapSize: 2048,
@@ -31,9 +47,12 @@ export const SCENE_LOOK = {
     /** How far above the table the shadow volume reaches (cars, props, ramps). */
     heightAbove: 12,
     /** Beats shadow acne on the large, nearly flat table top. */
-    normalBias: 0.04,
-    /** Blur radius in shadow texels — soft toy shadows, not hard edges. */
-    radius: 2.5,
+    normalBias: 0.05,
+    /**
+     * Blur radius in shadow texels. At 0.068 units to the texel that is a
+     * fifth of a unit of penumbra: soft toy shadows that still hold a shape.
+     */
+    radius: 3,
   },
   floor: {
     color: 0xb08a68,

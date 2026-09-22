@@ -27,7 +27,15 @@ export const TRACK_LOOK = {
     /** How far inside the road edge the solid core stops. */
     inset: 0.5,
     color: 0xfbf1e0,
-    opacity: 0.34,
+    /**
+     * Measured against the wood, not chosen: the table is a dark walnut that
+     * renders at sRGB (140, 50, 20), so a wash that read as a faint dusting on
+     * the old flat beige now reads as a painted white road. At 0.26 the stripe
+     * lands at (199, 177, 163) — unmistakable at speed — while a third of its
+     * red still comes from the wood underneath, so the grain and the boards
+     * read through it. The old 0.34 left only a quarter.
+     */
+    opacity: 0.26,
     /** Above the table, BELOW the skid marks at y = 0.02. */
     lift: 0.012,
     /** Per-vertex alpha jitter: shaken flour, not a painted stripe. */
@@ -52,7 +60,13 @@ export const TRACK_LOOK = {
   coffee: {
     step: 0.5,
     feather: 1.1,
-    color: 0x6b4423,
+    /**
+     * Darker than it looks it should be, because these ribbons are unlit: the
+     * old 0x6b4423 was a shade under a beige table but a shade OVER a walnut
+     * one, and a spill that is lighter than the table reads as milk. This
+     * renders at (90, 38, 15) against the table's (140, 50, 20).
+     */
+    color: 0x462a16,
     opacity: 0.78,
     lift: 0.015,
     speckle: 0.18,
@@ -93,6 +107,33 @@ export const TRACK_LOOK = {
     supportScaleZ: 1.2,
     /** Below this there is no room for a leg: the slab is all but on the table. */
     minSupportHeight: 0.35,
+  },
+  /**
+   * The start/finish gate, straddling the line.
+   *
+   * Model facts, measured from gate-finish.glb and not guessed: it is
+   * 1.55 x 1.1625 x 0.30 with its feet on its own y = 0, its legs' inner faces
+   * at x = +-0.4577 (a clear 0.9154, 59 % of its width) and its banner's
+   * underside at y = 0.8738 (75 % of its height). Both scales are computed
+   * from the bounding box of the LOADED model and those two fractions.
+   */
+  gate: {
+    file: 'gate-finish.glb',
+    clearWidthFraction: 0.9154 / 1.55,
+    clearHeightFraction: 0.8738 / 1.1625,
+    /** Each leg stands this far outside the road edge, so it cannot be hit. */
+    legClearance: 0.75,
+    /**
+     * Clear height under the banner, a good four car heights. The gate is
+     * stretched across the road and raised far less, exactly as the ramp
+     * pieces above are stretched: one uniform factor wide enough for a 10-unit
+     * road would stand 15 units tall, and the chase camera — six units up and
+     * aimed 23 degrees down — crops anything over about eight units from a car
+     * length away, so the banner would never be in shot.
+     */
+    clearHeight: 5.25,
+    /** Keeps the feet out of a z-fight with the table top. */
+    lift: 0.01,
   },
   /** Both ribbons draw before the skid marks (renderOrder 1), never after. */
   dustRenderOrder: -2,
@@ -467,6 +508,50 @@ export function createTrackView(track: Track, layout: TrackLayout): TrackView {
     piece.position.set(start.x - surface.x, start.y - surface.y, start.z - surface.z)
   }
 
+  /** The maps a loaded model brought with it, so dispose() gives them back. */
+  const collect = (root: THREE.Object3D): void => {
+    root.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return
+      const materials = Array.isArray(child.material) ? child.material : [child.material]
+      for (const material of materials) {
+        if (material instanceof THREE.MeshStandardMaterial && material.map) {
+          textures.push(material.map)
+        }
+      }
+    })
+  }
+
+  /**
+   * The gate over the finish line. `s = 0` IS the line (kitchenTable.ts), so
+   * the position and the heading come out of the track's own functions and not
+   * out of a pair of typed-in coordinates.
+   */
+  const buildGate = async (): Promise<void> => {
+    const look = TRACK_LOOK.gate
+    const gltf = await loader.loadAsync(look.file)
+    const gate = gltf.scene
+    gate.updateMatrixWorld(true)
+    const box = new THREE.Box3().setFromObject(gate)
+    const size = box.getSize(new THREE.Vector3())
+    // Wide enough that the whole road runs between the legs, tall enough that
+    // the banner is in frame — two factors, both read off the model itself.
+    const span = (track.widthAt(0) + 2 * look.legClearance) / (size.x * look.clearWidthFraction)
+    const rise = look.clearHeight / (size.y * look.clearHeightFraction)
+    gate.scale.set(span, rise, rise)
+
+    const foot = pointOn(track, 0, 0)
+    const tangent = track.tangentAt(0)
+    // `rotation.y = heading` turns the model's own +X into the left of travel
+    // (types.ts), which is what makes the gate span the road instead of lying
+    // along it. `box.min.y` puts its feet, not its origin, on the table.
+    gate.rotation.y = Math.atan2(tangent.x, tangent.z)
+    gate.position.set(foot.x, foot.y + look.lift - box.min.y * rise, foot.z)
+    gate.name = 'finish-gate'
+    claim(gate)
+    collect(gate)
+    group.add(gate)
+  }
+
   const buildRamp = async (): Promise<void> => {
     const look = TRACK_LOOK.ramp
     const [pieceGltf, supportGltf] = await Promise.all([
@@ -549,7 +634,7 @@ export function createTrackView(track: Track, layout: TrackLayout): TrackView {
     group.add(cones)
   }
 
-  const ready = Promise.all([buildRamp(), buildCones()]).then(() => undefined)
+  const ready = Promise.all([buildRamp(), buildCones(), buildGate()]).then(() => undefined)
 
   return {
     object: group,

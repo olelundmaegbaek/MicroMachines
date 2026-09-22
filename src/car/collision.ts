@@ -47,8 +47,13 @@ function wrapAngle(angle: number): number {
   return Math.atan2(Math.sin(angle), Math.cos(angle))
 }
 
-/** The twist one car takes from a hit whose outward normal is (nx, nz). */
-function twistFor(state: CarState, nx: number, nz: number, impact: number): number {
+/**
+ * The twist one car takes from a hit whose outward normal is (nx, nz).
+ * Exported because the prop collision (`world/propCollision.ts`) is the same
+ * hit with one body nailed to the table, and the twist must not be a second,
+ * slightly different copy of this.
+ */
+export function twistFor(state: CarState, nx: number, nz: number, impact: number): number {
   const sinH = Math.sin(state.heading)
   const cosH = Math.cos(state.heading)
   const alongNose = nx * sinH + nz * cosH

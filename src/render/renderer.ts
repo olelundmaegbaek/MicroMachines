@@ -6,13 +6,22 @@ import type { ViewportRect } from '../types'
 
 /** Everything that decides how bright and how contrasty the picture reads. */
 export const RENDER_LOOK = {
-  /** Cartoon, not cinema: a touch over 1 keeps the table bright. */
-  toneMappingExposure: 1.15,
+  /**
+   * Cartoon, not cinema. 1.15 was set against a flat beige table; the wood
+   * that replaced it is a far darker surface and the whole picture sank with
+   * it, so the exposure carries a fifth more light. Most of the lift belongs
+   * on the table itself (TABLE_LOOK.tint) — pushing it all through here would
+   * blow the flour, the cutting board and the cars out to white, because ACES
+   * flattens everything above roughly 0.5 into the same near-white.
+   */
+  toneMappingExposure: 1.4,
   antialias: true,
 } as const
 
 export interface GameRenderer {
   readonly renderer: THREE.WebGLRenderer
+  /** Highest anisotropy this GPU supports, for textures seen edge-on. */
+  readonly maxAnisotropy: number
   /** Current splitscreen rectangles, index 0 = player 1 (top). */
   readonly viewports: readonly [ViewportRect, ViewportRect]
   render(
@@ -63,6 +72,7 @@ export function createRenderer(container: HTMLElement): GameRenderer {
 
   return {
     renderer,
+    maxAnisotropy: renderer.capabilities.getMaxAnisotropy(),
     get viewports(): readonly [ViewportRect, ViewportRect] {
       return viewports
     },

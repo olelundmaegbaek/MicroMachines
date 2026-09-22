@@ -11,7 +11,7 @@ import {
   stepCar,
 } from './car/physics'
 import { createSkidMarks, skidStrength } from './car/skidMarks'
-import { PHYSICS } from './constants'
+import { PHYSICS, TABLE } from './constants'
 import { createInput } from './core/input'
 import { createLoop } from './core/loop'
 import { ChaseCamera } from './render/chaseCamera'
@@ -22,6 +22,9 @@ import { createTrackProgress } from './track/progress'
 import { createTrackView } from './track/trackView'
 import type { CarPose, Controls } from './types'
 import { createDebugOverlay } from './ui/debugOverlay'
+import { createPropField } from './world/propCollision'
+import { buildProps } from './world/props'
+import { createPropsView } from './world/propsView'
 import { createTable } from './world/table'
 
 /** Player 1 first. Typed as the literals so `input.controls` takes them. */
@@ -35,13 +38,25 @@ if (!container) throw new Error('Missing #app container in index.html')
 
 const world = createScene()
 const renderer = createRenderer(container)
-const table = createTable()
+const table = createTable(renderer.maxAnisotropy)
 const track = kitchenTableTrack
 const trackView = createTrackView(track, TRACK_LAYOUT)
 const skids = createSkidMarks()
-world.scene.add(table.object, trackView.object, skids.object)
+// The props are placed FROM the track — arc length and lateral offset, never
+// a hand-written x/z — so they have to be built after it, and the collision
+// and the view are handed the very same instances the placement produced.
+const props = buildProps(track)
+const propField = createPropField(props, {
+  halfWidth: TABLE.width / 2,
+  halfDepth: TABLE.depth / 2,
+})
+const propsView = createPropsView(props)
+world.scene.add(table.object, trackView.object, skids.object, propsView.object)
 trackView.ready.catch((error: unknown) => {
   console.error('Could not load the track models', error)
+})
+propsView.ready.catch((error: unknown) => {
+  console.error('Could not load the prop models', error)
 })
 
 const views = [createCarView(CAR_MODELS[0]), createCarView(CAR_MODELS[1])] as const
@@ -97,6 +112,16 @@ const loop = createLoop({
       refreshCarState(states[1])
     }
 
+    // Props AFTER the cars have been pushed apart, so a car shoved into the
+    // pot is put back on the table by the pot instead of being left inside
+    // it — and before `progress.advance`, for the same reason the car-to-car
+    // collision runs before it: the track has to see the final position.
+    for (const player of PLAYERS) {
+      if (propField.resolve(states[player]) > 0) refreshCarState(states[player])
+    }
+    // The knocked props roll on once per tick, not once per car.
+    propField.update(dt)
+
     for (const player of PLAYERS) {
       // After the collision on purpose: that moved the cars too, and the track
       // has to see where they actually ended up.
@@ -113,6 +138,8 @@ const loop = createLoop({
   render(alpha, frameSeconds): void {
     // Ages the existing marks before this frame's are laid, as `mark` expects.
     skids.update(frameSeconds)
+    // Only the props that actually moved get a new instance matrix.
+    propsView.update()
 
     for (const player of PLAYERS) {
       const state = states[player]
@@ -162,6 +189,7 @@ function dispose(): void {
   views[0].dispose()
   views[1].dispose()
   skids.dispose()
+  propsView.dispose()
   trackView.dispose()
   table.dispose()
   world.dispose()
