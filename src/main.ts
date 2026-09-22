@@ -99,6 +99,13 @@ for (const spec of carViews) {
 
 /** The view each player is currently driving. Swapped by the car select. */
 const activeViews: CarView[] = PLAYERS.map((player) => carViews[0][player])
+// These have to go in the scene here, not in syncCars. syncCars returns early
+// when the selection still matches what is already active, and the opening
+// selection matches this line exactly -- so on a fresh load it added nothing
+// and the table stood empty until someone happened to change car and change
+// back. Adding a view that is already in the scene is a no-op, so the swap
+// below stays correct.
+for (const view of activeViews) world.scene.add(view.object)
 
 /** Puts the chosen cars in the scene, and only those. */
 function syncCars(): void {
