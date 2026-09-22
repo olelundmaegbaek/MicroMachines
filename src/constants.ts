@@ -24,8 +24,16 @@ export const TABLE = {
   thickness: 3,
 } as const
 
-/** The kitchen floor, far enough below the table that falling off feels high. */
-export const FLOOR_Y = -60
+/**
+ * The kitchen floor, far enough below the table that falling off feels high.
+ *
+ * It also has to stay clear of a fall in progress. A car respawns 1.5 s after it
+ * leaves the table, and at `PHYSICS.gravity` it has dropped about 62 units by
+ * then, with the camera following it the whole way. A floor at -60 sat inside
+ * that fall, so the last frames clipped the car through the plane. The fog
+ * swallows the floor long before the car reaches it.
+ */
+export const FLOOR_Y = -85
 
 export const PHYSICS = {
   /** 60 Hz. Handling must not change with the monitor's refresh rate. */
