@@ -1,6 +1,19 @@
 import './style.css'
 
-import { PHYSICS, PLAYER_COLORS } from './constants'
+import { CAR_MODELS, createCarView } from './car/carView'
+import { resolveCarCollision } from './car/collision'
+import {
+  NO_GROUND,
+  copyCarState,
+  createCarState,
+  refreshCarState,
+  resetCarState,
+  stepCar,
+  type CarStart,
+  type CarState,
+} from './car/physics'
+import { createSkidMarks, skidStrength } from './car/skidMarks'
+import { FLOOR_Y, PHYSICS, TABLE } from './constants'
 import { createInput } from './core/input'
 import { createLoop } from './core/loop'
 import { ChaseCamera } from './render/chaseCamera'
@@ -8,8 +21,35 @@ import { createRenderer } from './render/renderer'
 import { createScene } from './render/scene'
 import type { CarPose } from './types'
 import { createDebugOverlay } from './ui/debugOverlay'
-import { PLACEHOLDER_START_POSES, createPlaceholderCar } from './world/placeholderCar'
 import { createTable, createTemporaryLandmarks } from './world/table'
+
+/** Player 1 first. Typed as the literals so `input.controls` takes them. */
+const PLAYERS = [0, 1] as const
+
+/* ------------------------------------------------------------------------ *
+ * TEMPORARY — until the track (phase 3).
+ *
+ * Two start poses on the empty table, and a respawn that drops a car that fell
+ * off the edge back onto its start. The track owns both for real: a start grid,
+ * and a respawn at the last passed checkpoint after a short delay.
+ * ------------------------------------------------------------------------ */
+const START_POSES: readonly [CarStart, CarStart] = [
+  { x: -50, z: -11, heading: Math.PI / 2 },
+  { x: -50, z: 11, heading: Math.PI / 2 },
+]
+/** Deep enough that the fall reads as a fall before the car reappears. */
+const RESPAWN_BELOW = FLOOR_Y + 5
+
+/**
+ * TEMPORARY table edge: the car falls as soon as its centre leaves the table
+ * top. Phase 3 replaces this with the track's own surface lookup, which also
+ * answers with the ramp height and the grip of coffee and flour.
+ */
+function groundUnder(state: Readonly<CarState>): number {
+  const onTable =
+    Math.abs(state.x) <= TABLE.width / 2 && Math.abs(state.z) <= TABLE.depth / 2
+  return onTable ? TABLE.surfaceY : NO_GROUND
+}
 
 const container = document.querySelector<HTMLDivElement>('#app')
 if (!container) throw new Error('Missing #app container in index.html')
@@ -18,42 +58,97 @@ const world = createScene()
 const renderer = createRenderer(container)
 const table = createTable()
 const landmarks = createTemporaryLandmarks() // TEMPORARY, see world/table.ts
-world.scene.add(table.object, landmarks.object)
+const skids = createSkidMarks()
+world.scene.add(table.object, landmarks.object, skids.object)
 
-const cars = [
-  createPlaceholderCar(PLAYER_COLORS[0], PLACEHOLDER_START_POSES[0]),
-  createPlaceholderCar(PLAYER_COLORS[1], PLACEHOLDER_START_POSES[1]),
-] as const
-world.scene.add(cars[0].object, cars[1].object)
+const views = [createCarView(CAR_MODELS[0]), createCarView(CAR_MODELS[1])] as const
+for (const player of PLAYERS) {
+  world.scene.add(views[player].object)
+  views[player].ready.catch((error: unknown) => {
+    console.error(`Could not load ${CAR_MODELS[player].file}`, error)
+  })
+}
+
+const states = [createCarState(START_POSES[0]), createCarState(START_POSES[1])] as const
+// The pose the last tick started from; the renderer interpolates from it.
+const previous = [createCarState(START_POSES[0]), createCarState(START_POSES[1])] as const
+const respawned = [false, false]
 
 const chase = [new ChaseCamera(), new ChaseCamera()] as const
-chase[0].snapTo(cars[0].pose)
-chase[1].snapTo(cars[1].pose)
+const poses: [Readonly<CarPose>, Readonly<CarPose>] = [
+  views[0].present(states[0], states[0], 1, 0),
+  views[1].present(states[1], states[1], 1, 0),
+]
+chase[0].snapTo(poses[0])
+chase[1].snapTo(poses[1])
 
 const overlay = createDebugOverlay(container)
 const input = createInput()
-
-// Filled in every render, read again in onFrame for the overlay.
-const poses: [Readonly<CarPose>, Readonly<CarPose>] = [cars[0].pose, cars[1].pose]
 
 const loop = createLoop({
   fixedStep: PHYSICS.fixedStep,
   maxStepsPerFrame: PHYSICS.maxStepsPerFrame,
   update(dt): void {
-    cars[0].update(dt, input.controls(0))
-    cars[1].update(dt, input.controls(1))
+    for (const player of PLAYERS) {
+      copyCarState(previous[player], states[player])
+      stepCar(states[player], input.controls(player), dt, {
+        groundY: groundUnder(states[player]),
+      })
+    }
+
+    // The collision edits velocity and heading behind the model's back, so the
+    // derived slip and speed have to be recomputed before anything reads them.
+    if (resolveCarCollision(states[0], states[1]) > 0) {
+      refreshCarState(states[0])
+      refreshCarState(states[1])
+    }
+
+    for (const player of PLAYERS) {
+      if (states[player].y >= RESPAWN_BELOW) continue
+      resetCarState(states[player], START_POSES[player])
+      copyCarState(previous[player], states[player])
+      respawned[player] = true
+    }
   },
   render(alpha, frameSeconds): void {
-    poses[0] = cars[0].present(alpha)
-    poses[1] = cars[1].present(alpha)
-    // The camera is a visual, not a simulation: smoothing it with the real
-    // frame time keeps it silky on a 144 Hz screen instead of stepping at 60 Hz.
-    chase[0].update(frameSeconds, poses[0])
-    chase[1].update(frameSeconds, poses[1])
+    // Ages the existing marks before this frame's are laid, as `mark` expects.
+    skids.update(frameSeconds)
+
+    for (const player of PLAYERS) {
+      const state = states[player]
+      const view = views[player]
+      poses[player] = view.present(previous[player], state, alpha, frameSeconds)
+
+      const strength = skidStrength(
+        state.slip,
+        state.speed,
+        input.controls(player).handbrake,
+        state.airborne,
+      )
+      for (let side = 0; side < 2; side += 1) {
+        const trail = player * 2 + side
+        if (strength > 0 && !respawned[player]) {
+          skids.mark(trail, view.rearContacts[side].x, view.rearContacts[side].z, strength)
+        } else {
+          skids.lift(trail)
+        }
+      }
+
+      if (respawned[player]) {
+        // No swoop across the kitchen: the car did not drive there.
+        chase[player].snapTo(poses[player])
+        respawned[player] = false
+      } else {
+        // The camera is a visual, not a simulation: smoothing it with the real
+        // frame time keeps it silky on a 144 Hz screen instead of stepping at 60 Hz.
+        chase[player].update(frameSeconds, poses[player])
+      }
+    }
+
     renderer.render(world.scene, [chase[0].camera, chase[1].camera])
   },
   onFrame(stats): void {
-    overlay.update(stats, poses)
+    overlay.update(stats, states)
   },
 })
 
@@ -64,8 +159,9 @@ function dispose(): void {
   input.dispose()
   overlay.dispose()
   renderer.dispose()
-  cars[0].dispose()
-  cars[1].dispose()
+  views[0].dispose()
+  views[1].dispose()
+  skids.dispose()
   landmarks.dispose()
   table.dispose()
   world.dispose()

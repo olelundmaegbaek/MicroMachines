@@ -1,5 +1,5 @@
+import type { CarState } from '../car/physics'
 import type { FrameStats } from '../core/loop'
-import type { CarPose } from '../types'
 
 export const DEBUG_OVERLAY = {
   /** The readout is for eyeballing, and 60 Hz text just flickers. */
@@ -13,7 +13,7 @@ export const DEBUG_OVERLAY = {
 const TOGGLE_CODES: readonly string[] = DEBUG_OVERLAY.toggleCodes
 
 export interface DebugOverlay {
-  update(stats: FrameStats, poses: readonly Readonly<CarPose>[]): void
+  update(stats: FrameStats, cars: readonly Readonly<CarState>[]): void
   dispose(): void
 }
 
@@ -40,7 +40,7 @@ export function createDebugOverlay(container: HTMLElement): DebugOverlay {
   window.addEventListener('keydown', onKeyDown)
 
   return {
-    update(stats, poses): void {
+    update(stats, cars): void {
       sinceUpdate += stats.frameSeconds
       if (!visible || sinceUpdate < interval) return
       sinceUpdate = 0
@@ -48,10 +48,14 @@ export function createDebugOverlay(container: HTMLElement): DebugOverlay {
       const lines = [
         `fps ${format(stats.fps)}   fysik-ticks ${stats.ticks}${stats.droppedTicks > 0 ? ` (${stats.droppedTicks} droppet)` : ''}`,
       ]
-      poses.forEach((pose, index) => {
-        const heading = ((pose.heading * 180) / Math.PI).toFixed(0).padStart(4)
+      cars.forEach((car, index) => {
+        const heading = ((car.heading * 180) / Math.PI).toFixed(0).padStart(4)
+        const slip = ((car.slipAngle * 180) / Math.PI).toFixed(0).padStart(4)
         lines.push(
-          `spiller ${index + 1}  x ${format(pose.x)}  z ${format(pose.z)}  fart ${format(pose.speed)}  kurs ${heading}°`,
+          `spiller ${index + 1}  fart ${format(car.forwardSpeed)}  slip ${slip}°  ${car.airborne ? 'i luften' : 'på bordet'}`,
+        )
+        lines.push(
+          `           x ${format(car.x)}  z ${format(car.z)}  kurs ${heading}°`,
         )
       })
       lines.push('F3 / ´ skjuler panelet')
